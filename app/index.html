@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReelPulse - Video Recommendations</title>
+    <!-- 1. Include Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Include a professional font from Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* A little custom style to make sure our app looks great */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .video-card {
+            /* Ensures video placeholders have a consistent 16:9 aspect ratio */
+            aspect-ratio: 16 / 9;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-4 sm:p-8">
+
+    <!-- Main container for the app -->
+    <div class="w-full max-w-4xl">
+        <!-- HEADER -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">ReelPulse</h1>
+            <p class="text-gray-400 mt-2">Your AI-Powered Video Recommendation Engine</p>
+        </header>
+
+        <!-- INPUT SECTION: Where the user interacts -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-xl font-semibold mb-4">Get Your Personalized Feed</h2>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="username-input" class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter a username (e.g., user_100 or new_user)">
+                <button id="get-feed-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors w-full sm:w-auto">
+                    Get Recommendations
+                </button>
+            </div>
+        </div>
+
+        <!-- RESULTS SECTION: Where recommendations appear -->
+        <main id="results-container">
+            <div id="status-message" class="text-center text-gray-500">
+                Enter a username to see your personalized video feed.
+            </div>
+            <div id="recommendations-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Video cards will be inserted here by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC: The "brain" of the webpage -->
+    <script>
+        // Get references to the HTML elements we need to interact with
+        const usernameInput = document.getElementById('username-input');
+        const getFeedBtn = document.getElementById('get-feed-btn');
+        const recommendationsGrid = document.getElementById('recommendations-grid');
+        const statusMessage = document.getElementById('status-message');
+
+        // Set up event listeners to handle user actions
+        getFeedBtn.addEventListener('click', handleGetFeed);
+        usernameInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') handleGetFeed();
+        });
+
+        // This is the main function that runs when the user clicks the button
+        async function handleGetFeed() {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                updateStatus('Please enter a username.', 'error');
+                return;
+            }
+            setLoadingState(true);
+            try {
+                // Call our backend API to get the recommendations
+                const response = await fetch(`/api/v1/feed/${username}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const data = await response.json();
+                // Display the results on the page
+                displayRecommendations(data);
+            } catch (error) {
+                console.error('Fetch error:', error);
+                updateStatus('Could not fetch recommendations. Is the server running?', 'error');
+                recommendationsGrid.innerHTML = '';
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        // This function takes the data from the API and creates the visual cards
+        function displayRecommendations(data) {
+            recommendationsGrid.innerHTML = ''; // Clear old results
+            
+            // Create a user-friendly title for the feed type
+            const feedType = data.type.includes('personalized') ? 'Personalized Feed' : `For You (${data.type.replace(/_/g, ' ')})`;
+            updateStatus(`${feedType} for ${data.username}`, 'success');
+
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach(post => {
+                    const card = createVideoCard(post);
+                    recommendationsGrid.innerHTML += card;
+                });
+            } else {
+                updateStatus(`No recommendations found for ${data.username}.`, 'default');
+            }
+        }
+
+        // This function generates the HTML for a single video card with meaningful info
+        function createVideoCard(post) {
+            // Capitalize the first letter of the category for a nice title
+            const title = post.category.charAt(0).toUpperCase() + post.category.slice(1);
+            const placeholderText = `${title}+Video`;
+            // Use a placeholder image service to simulate video thumbnails
+            const thumbnailUrl = `https://placehold.co/600x400/1a202c/9ca3af?text=${placeholderText}`;
+            
+            return `
+                <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-transform duration-300">
+                    <img class="w-full h-auto video-card" src="${thumbnailUrl}" alt="Video thumbnail for ${post.id}">
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg">${title}</h3>
+                        <p class="text-gray-400 text-sm mt-1">${post.id}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Helper functions for a better user experience ---
+        function setLoadingState(isLoading) {
+            getFeedBtn.disabled = isLoading;
+            getFeedBtn.innerHTML = isLoading ? 'Loading...' : 'Get Recommendations';
+            if (isLoading) updateStatus('Fetching your recommendations...', 'default');
+        }
+
+        function updateStatus(message, type = 'default') {
+            statusMessage.textContent = message;
+            statusMessage.className = 'text-center mb-4 font-semibold '; // Reset classes
+            const colorClasses = {
+                success: 'text-green-400',
+                error: 'text-red-400',
+                default: 'text-gray-500'
+            };
+            statusMessage.classList.add(colorClasses[type] || colorClasses.default);
+        }
+    </script>
+
+</body>
+</html>
+

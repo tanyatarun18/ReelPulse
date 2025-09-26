@@ -1,0 +1,19 @@
+{
+	"info": {
+		"_postman_id": "db2ada5f-37d0-4b77-beea-cd03cdfc1cd7",
+		"name": "ReelPulse API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47377827",
+		"_collection_link": "https://tanyatarun03-148135.postman.co/workspace/Tanya-Tarun's-Workspace~88b04c11-8e48-4de0-8de4-dcfadba994d7/collection/47377827-db2ada5f-37d0-4b77-beea-cd03cdfc1cd7?action=share&source=collection_link&creator=47377827"
+	},
+	"item": [
+		{
+			"name": "Get Personalized Feed for Known User",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
