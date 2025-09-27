@@ -3,51 +3,33 @@ from sqlalchemy.orm import Session
 import numpy as np
 from typing import Optional
 
-# Import the database session dependency
 from app.database import get_db
-# Import the recommendation service functions
 from app.services import recommendation_service as rs
-# Import the database models
 from app import models
 
-# Create a new router object. This helps organize the API endpoints.
 router = APIRouter()
 
 
 @router.on_event("startup")
 def startup_event():
-    """
-    This function runs once when the FastAPI server starts.
-    It pre-loads the AI model into memory so that it's ready for requests.
-    """
+
     rs.load_model()
 
 
 @router.get("/feed/{username}")
 def get_personalized_feed(username: str, project_code: Optional[str] = None, db: Session = Depends(get_db)):
-    """
-    This is the main recommendation endpoint. It handles all three cases:
-    1. Personalized feed for a known user.
-    2. Generic cold start feed for a new user.
-    3. Mood-based cold start feed for a new user who provides a project_code.
-    """
-    # Check if the user exists in our database.
+   
     user = db.query(models.User).filter(models.User.username == username).first()
 
-    # --- THIS IS THE UPDATED COLD START LOGIC ---
     if not user:
-        # If a project_code (mood) is provided by a new user...
         if project_code:
-            # ...call the new function to get recommendations for that specific category.
             recommendations = rs.get_category_recommendations(project_code)
             return {"username": username, "type": f"cold_start_category: {project_code}",
                     "recommendations": recommendations}
         else:
-            # Otherwise, use the original cold start logic for a generic feed.
             recommendations = rs.get_cold_start_recommendations()
             return {"username": username, "type": "cold_start", "recommendations": recommendations}
 
-    # If the user is known, get their personalized feed from the AI model.
     recommendations = rs.get_recommendations_for_user(username)
     return {"username": username, "type": "personalized", "recommendations": recommendations}
 
